@@ -19,6 +19,8 @@ from softgroup.util import (AverageMeter, SummaryWriter, build_optimizer, checkp
 from torch.nn.parallel import DistributedDataParallel
 from tqdm import tqdm
 
+from softgroup.model import SuperpointFormer
+
 
 def get_args():
     parser = argparse.ArgumentParser('SoftGroup')
@@ -98,11 +100,11 @@ def validate(epoch, model, val_loader, cfg, logger, writer):
         results = collect_results_gpu(results, len(val_set))
     if is_main_process():
         for res in results:
-            all_sem_preds.append(res['semantic_preds'])
-            all_sem_labels.append(res['semantic_labels'])
-            all_offset_preds.append(res['offset_preds'])
-            all_offset_labels.append(res['offset_labels'])
-            all_inst_labels.append(res['instance_labels'])
+            # all_sem_preds.append(res['semantic_preds'])
+            # all_sem_labels.append(res['semantic_labels'])
+            # all_offset_preds.append(res['offset_preds'])
+            # all_offset_labels.append(res['offset_labels'])
+            # all_inst_labels.append(res['instance_labels'])
             if not cfg.model.semantic_only:
                 all_pred_insts.append(res['pred_instances'])
                 all_gt_insts.append(res['gt_instances'])
@@ -113,14 +115,14 @@ def validate(epoch, model, val_loader, cfg, logger, writer):
             writer.add_scalar('val/AP', eval_res['all_ap'], epoch)
             writer.add_scalar('val/AP_50', eval_res['all_ap_50%'], epoch)
             writer.add_scalar('val/AP_25', eval_res['all_ap_25%'], epoch)
-        logger.info('Evaluate semantic segmentation and offset MAE')
-        miou = evaluate_semantic_miou(all_sem_preds, all_sem_labels, cfg.model.ignore_label, logger)
-        acc = evaluate_semantic_acc(all_sem_preds, all_sem_labels, cfg.model.ignore_label, logger)
-        mae = evaluate_offset_mae(all_offset_preds, all_offset_labels, all_inst_labels,
-                                  cfg.model.ignore_label, logger)
-        writer.add_scalar('val/mIoU', miou, epoch)
-        writer.add_scalar('val/Acc', acc, epoch)
-        writer.add_scalar('val/Offset MAE', mae, epoch)
+        # logger.info('Evaluate semantic segmentation and offset MAE')
+        # miou = evaluate_semantic_miou(all_sem_preds, all_sem_labels, cfg.model.ignore_label, logger)
+        # acc = evaluate_semantic_acc(all_sem_preds, all_sem_labels, cfg.model.ignore_label, logger)
+        # mae = evaluate_offset_mae(all_offset_preds, all_offset_labels, all_inst_labels,
+        #                           cfg.model.ignore_label, logger)
+        # writer.add_scalar('val/mIoU', miou, epoch)
+        # writer.add_scalar('val/Acc', acc, epoch)
+        # writer.add_scalar('val/Offset MAE', mae, epoch)
 
 
 def main():
@@ -148,7 +150,7 @@ def main():
     writer = SummaryWriter(cfg.work_dir)
 
     # model
-    model = SoftGroup(**cfg.model).cuda()
+    model = SuperpointFormer(**cfg.model).cuda()
     if args.dist:
         model = DistributedDataParallel(model, device_ids=[torch.cuda.current_device()])
     scaler = torch.cuda.amp.GradScaler(enabled=cfg.fp16)
@@ -175,7 +177,7 @@ def main():
     # train and val
     logger.info('Training')
     for epoch in range(start_epoch, cfg.epochs + 1):
-        train(epoch, model, optimizer, scaler, train_loader, cfg, logger, writer)
+        # train(epoch, model, optimizer, scaler, train_loader, cfg, logger, writer)
         if not args.skip_validate and (is_multiple(epoch, cfg.save_freq) or is_power2(epoch)):
             validate(epoch, model, val_loader, cfg, logger, writer)
         writer.flush()
